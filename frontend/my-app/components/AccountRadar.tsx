@@ -1,3 +1,50 @@
-"use client";
-import type { Account } from "../types";
-export function AccountRadar({ accounts, activeId, onSelect }: { accounts: Account[]; activeId?: string; onSelect: (account: Account) => void }) { return <div className="divide-y divide-slate-800">{accounts.map((a) => <button key={a.id} onClick={() => onSelect(a)} className={`flex w-full items-center justify-between p-4 text-left transition hover:bg-slate-800/60 ${a.id === activeId ? "bg-emerald-400/5" : ""}`}><span><span className="block text-sm font-medium text-white">{a.name}</span><span className="text-xs text-slate-500">{a.industry} · {a.target_tier}</span></span><span className="text-right"><span className="block font-mono text-sm text-emerald-300">{a.current_score.toFixed(1)}</span><span className="text-[10px] text-slate-500">intent score</span></span></button>)}</div>; }
+'use client';
+import { Account } from '../types';
+
+export default function AccountRadar({ accounts, activeAccountId, onSelect }: { accounts: Account[], activeAccountId?: string, onSelect: (account: Account) => void }) {
+  if (!accounts || accounts.length === 0) {
+    return <div className="text-slate-400 p-4 text-center">No accounts synced. Awaiting webhook data...</div>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b border-slate-800 text-slate-400 text-sm uppercase tracking-wider">
+            <th className="p-4 font-medium">Company</th>
+            <th className="p-4 font-medium">Industry</th>
+            <th className="p-4 font-medium">Tier</th>
+            <th className="p-4 font-medium text-right">Intent Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {accounts.map((account) => {
+            const isActive = account.id === activeAccountId;
+            const isHot = account.current_score >= 75;
+
+            return (
+              <tr
+                key={account.id}
+                onClick={() => onSelect(account)}
+                className={`border-b border-slate-800/50 cursor-pointer transition-colors hover:bg-slate-800/50 ${isActive ? 'bg-slate-800/80 border-l-4 border-l-emerald-500' : 'border-l-4 border-l-transparent'}`}
+              >
+                <td className="p-4 font-medium text-white">{account.name}</td>
+                <td className="p-4 text-slate-300">{account.industry}</td>
+                <td className="p-4">
+                  <span className="px-2 py-1 text-xs rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    {account.target_tier}
+                  </span>
+                </td>
+                <td className="p-4 text-right">
+                  <span className={`font-bold ${isHot ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    {account.current_score}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}

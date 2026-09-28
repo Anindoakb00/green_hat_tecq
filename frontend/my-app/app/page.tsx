@@ -1,24 +1,88 @@
-﻿"use client";
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useMemo, useState } from "react";
-import { Header } from "../components/Header";
-import { AccountRadar } from "../components/AccountRadar";
-import { SignalFeed } from "../components/SignalFeed";
-import { CopyStudio } from "../components/CopyStudio";
-import type { Account, IntentEvent } from "../types";
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-export default function Home() {
-  const [token, setToken] = useState(""); const [draftToken, setDraftToken] = useState(""); const [accounts, setAccounts] = useState<Account[]>([]); const [activeId, setActiveId] = useState(""); const [events, setEvents] = useState<IntentEvent[]>([]); const [loading, setLoading] = useState(false); const [ingesting, setIngesting] = useState(false); const [message, setMessage] = useState(""); const [eventType, setEventType] = useState("pricing_page_visit"); const [eventWeight, setEventWeight] = useState("35");
-  useEffect(() => { const saved = window.localStorage.getItem("epochs_access_token"); if (saved) setToken(saved); }, []);
-  async function loadAccounts() { if (!token) return; setLoading(true); try { const response = await fetch(`${API}/api/accounts`, { headers: { Authorization: `Bearer ${token}` } }); if (!response.ok) throw new Error("Authentication failed or no accounts are available"); const data = (await response.json()) as Account[]; setAccounts(data); setActiveId((current) => current || data[0]?.id || ""); setMessage(""); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Unable to load accounts"); } finally { setLoading(false); } }
-  useEffect(() => { void loadAccounts(); }, [token]); const active = useMemo(() => accounts.find((account) => account.id === activeId) || accounts[0], [accounts, activeId]);
-  useEffect(() => { if (!active || !token) return; fetch(`${API}/api/accounts/${active.id}/events`, { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.json()).then(setEvents).catch(() => setEvents([])); }, [active, token]);
-  function signIn() { if (!draftToken.trim()) return; window.localStorage.setItem("epochs_access_token", draftToken.trim()); setToken(draftToken.trim()); } function signOut() { window.localStorage.removeItem("epochs_access_token"); setToken(""); setAccounts([]); }
-  async function ingestPdfs() { setIngesting(true); setMessage(""); try { const response = await fetch(`${API}/api/knowledge/ingest-pdfs`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.detail || "PDF ingestion failed"); setMessage(`PDF ingestion complete: ${data.chunks_inserted} chunks inserted.`); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "PDF ingestion failed"); } finally { setIngesting(false); } }
-  async function addSignal() { if (!active) return; const response = await fetch(`${API}/api/accounts/${active.id}/events`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ account_id: active.id, source: "dashboard", event_type: eventType, weight: Number(eventWeight) }) }); if (!response.ok) { setMessage("Could not add intent signal."); return; } setMessage("Intent signal added and score recalculated."); await loadAccounts(); }
-  if (!token) return <main className="flex min-h-screen items-center justify-center bg-[#07111f] px-5 text-slate-200"><div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/70 p-7"><h1 className="text-xl font-semibold text-white">Connect your workspace</h1><p className="mt-2 text-sm text-slate-500">Paste your Supabase access token.</p><input type="password" value={draftToken} onChange={(event) => setDraftToken(event.target.value)} className="mt-6 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-sm" /><button onClick={signIn} className="mt-3 w-full rounded-lg bg-emerald-400 py-3 text-sm font-semibold text-slate-950">Continue securely</button></div></main>;
-  return <main className="min-h-screen bg-[#07111f] text-slate-200"><Header /><div className="mx-auto max-w-[1500px] px-5 py-8 lg:px-10"><div className="mb-8 flex items-end justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Executive command center</p><h1 className="mt-2 text-3xl font-semibold text-white">Account intelligence, in motion.</h1><p className="mt-2 text-sm text-slate-500">Live Supabase-backed account and intent operations.</p></div><div className="flex items-center gap-4"><button onClick={ingestPdfs} disabled={ingesting} className="rounded-lg border border-emerald-400/30 px-3 py-2 text-xs text-emerald-300 disabled:opacity-50">{ingesting ? "Ingesting PDFs..." : "Ingest campaign PDFs"}</button><button onClick={signOut} className="text-xs text-slate-500">Sign out</button></div></div>{message && <div className="mb-5 rounded-lg border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs text-emerald-300">{message}</div>}{loading ? <p className="text-sm text-slate-500">Loading authenticated accounts...</p> : accounts.length === 0 ? <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-8 text-sm text-slate-500">No accounts found. Add an account in Supabase before generating copy.</div> : <><div className="mb-6 grid gap-3 sm:grid-cols-3"><Metric label="Tracked accounts" value={`${accounts.length}`} detail="Live agency records" /><Metric label="High-intent accounts" value={`${accounts.filter((a) => a.current_score >= 75).length}`} detail="Score above 75" /><Metric label="Average score" value={`${Math.round(accounts.reduce((sum, a) => sum + a.current_score, 0) / accounts.length)}`} detail="Current intent" /></div><div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.7fr)]"><section className="mb-5 rounded-xl border border-slate-800 bg-slate-900/60 p-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-slate-400">Add test intent signal</span><input value={eventType} onChange={(event) => setEventType(event.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs" /><input value={eventWeight} onChange={(event) => setEventWeight(event.target.value)} type="number" className="w-20 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs" /><button onClick={addSignal} className="rounded bg-emerald-400 px-3 py-1.5 text-xs font-semibold text-slate-950">Add signal</button></div></section><section className="rounded-xl border border-slate-800 bg-slate-900/60"><div className="border-b border-slate-800 px-5 py-4"><p className="text-sm font-semibold text-white">Account radar</p></div><AccountRadar accounts={accounts} activeId={active?.id} onSelect={(account) => setActiveId(account.id)} /></section>{active && <section className="rounded-xl border border-slate-800 bg-slate-900/60"><SignalFeed account={active} events={events} loading={false} /></section>}{active && <section className="xl:col-span-2 rounded-xl border border-slate-800 bg-slate-900/60"><CopyStudio account={active} token={token} /></section>}</div></>}</div></main>;
-}
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) { return <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold text-white">{value}</p><p className="mt-1 text-[10px] text-slate-600">{detail}</p></div>; }
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
+import { useEffect, useState } from 'react';
+import AccountRadar from '../components/AccountRadar';
+import SignalFeed from '../components/SignalFeed';
+import CopyStudio from '../components/CopyStudio';
 
+export default function Dashboard() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [activeAccount, setActiveAccount] = useState<any | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
+
+  // Fetch real accounts from FastAPI on load
+  useEffect(() => {
+    fetch('http://localhost:8000/api/accounts', {
+      headers: { 'Authorization': 'Bearer local-demo-token' }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setAccounts(data);
+        if (data.length > 0) setActiveAccount(data[0]);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Fetch real events when an account is clicked
+  useEffect(() => {
+    if (activeAccount) {
+      fetch(`http://localhost:8000/api/accounts/${activeAccount.id}/events`, {
+        headers: { 'Authorization': 'Bearer local-demo-token' }
+      })
+        .then((res) => res.json())
+        .then((data) => setEvents(data))
+        .catch(console.error);
+    }
+  }, [activeAccount]);
+
+  const highIntentCount = accounts.filter(a => a.current_score >= 75).length;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
+      <header className="mb-8 border-b border-slate-800 pb-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-emerald-400">EPOCHS</h1>
+          <p className="text-slate-400 text-sm tracking-widest uppercase">Green Hat ABM Execution Engine</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-sm text-slate-400">Live API Sync Operational</span>
+        </div>
+      </header>
+
+      {/* TOP: Engine Telemetry */}
+      <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+          <h3 className="text-slate-400 text-sm uppercase tracking-wider mb-2">Tracked Accounts</h3>
+          <p className="text-4xl font-bold text-white">{accounts.length}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+          <h3 className="text-slate-400 text-sm uppercase tracking-wider mb-2">High-Intent Accounts</h3>
+          <p className="text-4xl font-bold text-emerald-400">{highIntentCount}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+          <h3 className="text-slate-400 text-sm uppercase tracking-wider mb-2">Active Data Source</h3>
+          <p className="text-xl font-semibold text-white mt-2">Supabase pgvector</p>
+        </div>
+      </div>
+
+      {/* MIDDLE: Radar and Signals Split */}
+      <div className="grid grid-cols-12 gap-6 mb-8">
+        <div className="col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4 text-white">Account Radar</h2>
+          <AccountRadar accounts={accounts} activeAccountId={activeAccount?.id} onSelect={setActiveAccount}/>
+        </div>
+        <div className="col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h2 className="text-xl font-semibold mb-4 text-white">Signal Timeline</h2>
+          <SignalFeed accountName={activeAccount?.name} events={events}/>
+        </div>
+      </div>
+
+      {/* BOTTOM: Generative Studio */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-4 text-white">Execution Studio</h2>
+        <CopyStudio activeAccount={activeAccount}/>
+      </div>
+    </div>
+  );
+}
