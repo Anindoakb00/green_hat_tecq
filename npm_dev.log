@@ -27,3 +27,22 @@
   16 |       headers: { 'Authorization': 'Bearer local-demo-token' }
   17 |     })
   18 |       .then((res) => res.json())
+ GET / 200 in 115ms (next.js: 19ms, application-code: 96ms)
+[browser] TypeError: Failed to fetch
+    at Dashboard.useEffect (app/page.tsx:15:5)
+  13 |   // Fetch real accounts from FastAPI on load
+  14 |   useEffect(() => {
+> 15 |     fetch('http://localhost:8000/api/accounts', {
+     |     ^
+  16 |       headers: { 'Authorization': 'Bearer local-demo-token' }
+  17 |     })
+  18 |       .then((res) => res.json())
+[browser] TypeError: Failed to fetch
+    at Dashboard.useEffect (app/page.tsx:15:5)
+  13 |   // Fetch real accounts from FastAPI on load
+  14 |   useEffect(() => {
+> 15 |     fetch('http://localhost:8000/api/accounts', {
+     |     ^
+  16 |       headers: { 'Authorization': 'Bearer local-demo-token' }
+  17 |     })
+  18 |       .then((res) => res.json())

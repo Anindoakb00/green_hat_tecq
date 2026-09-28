@@ -1,14 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { useEffect, useState } from 'react';
 import AccountRadar from '../components/AccountRadar';
-import { SignalFeed } from '../components/SignalFeed';
-import { CopyStudio } from '../components/CopyStudio';
-import { Account, IntentEvent } from '../types';
+import SignalFeed from '../components/SignalFeed';
+import CopyStudio from '../components/CopyStudio';
 
 export default function Dashboard() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [activeAccount, setActiveAccount] = useState<Account | null>(null);
-  const [events, setEvents] = useState<IntentEvent[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [activeAccount, setActiveAccount] = useState<any | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
 
   // Fetch real accounts from FastAPI on load
   useEffect(() => {
@@ -74,14 +74,14 @@ export default function Dashboard() {
         </div>
         <div className="col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h2 className="text-xl font-semibold mb-4 text-white">Signal Timeline</h2>
-          {activeAccount && <SignalFeed account={activeAccount} events={events} loading={false}/>}
+          <SignalFeed accountName={activeAccount?.name} events={events}/>
         </div>
       </div>
 
       {/* BOTTOM: Generative Studio */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
         <h2 className="text-xl font-semibold mb-4 text-white">Execution Studio</h2>
-        {activeAccount && <CopyStudio account={activeAccount} token="local-demo-token" />}
+        <CopyStudio activeAccount={activeAccount}/>
       </div>
     </div>
   );
