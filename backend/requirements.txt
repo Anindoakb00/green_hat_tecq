@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+supabase
+sentence-transformers
+pypdf
+pymupdf
+pytesseract
+pydantic>=2.0
+pydantic-settings
+groq
+python-dotenv
